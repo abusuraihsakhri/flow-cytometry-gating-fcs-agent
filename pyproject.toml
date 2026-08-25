@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flow-cytometry-gating-fcs-engine"
+version = "2.0.0"
+description = "FlowGate-AI: FCS 3.1 Flow Cytometry Compensation & Auto-Gating Engine"
+readme = "README.md"
+authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Security/Cryptography",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+flow-cytometry-gating-fcs-engine = "flow_cytometry_gate.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/abusuraihsakhri/flow-cytometry-gating-fcs-engine"
+Repository = "https://github.com/abusuraihsakhri/flow-cytometry-gating-fcs-engine.git"
