@@ -1,4 +1,6 @@
+import os
 import sys
+import tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -42,3 +44,35 @@ def test_coordinator():
 def test_cli():
     assert main(["audit", "--task-id", "CLI-01"]) == 0
     assert main(["chat", "What", "is", "the", "system", "status?"]) == 0
+
+
+def test_batch_missing_input_file():
+    """Test that batch command handles missing input file gracefully."""
+    result = main(["batch", "-i", "nonexistent_file_12345.csv", "-o", "output.csv"])
+    assert result == 1
+
+
+def test_batch_with_valid_csv():
+    """Test batch processing with a valid CSV file."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, newline='') as f:
+        f.write("task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor\n")
+        f.write("BATCH-T1,TARGET-B1,12.0,4.0,False,NOMINAL\n")
+        f.write("BATCH-T2,TARGET-B2,35.0,15.0,True,DISCORDANT\n")
+        input_path = f.name
+
+    output_path = input_path.replace('.csv', '_output.csv')
+    try:
+        result = main(["batch", "-i", input_path, "-o", output_path])
+        assert result == 0
+        assert os.path.isfile(output_path)
+
+        import csv
+        with open(output_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) == 2
+            assert "overall_status" in rows[0]
+    finally:
+        os.unlink(input_path)
+        if os.path.exists(output_path):
+            os.unlink(output_path)
