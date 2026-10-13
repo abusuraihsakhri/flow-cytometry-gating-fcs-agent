@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const http = require("node:http");
 const { chromium } = require("playwright-core");
 
 function fcsFixture() {
@@ -26,12 +27,21 @@ function fcsFixture() {
 (async function () {
   const chrome = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find(fs.existsSync);
   if (!chrome) throw new Error("Chromium/Chrome is required for end-to-end verification");
-  const browser = await chromium.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox"] });
+  const server = http.createServer((req, res) => {
+    const pathname = new URL(req.url, "http://localhost").pathname;
+    const allowed = pathname === "/" ? "index.html" : pathname === "/web/fcs.js" || pathname === "/web/app.js" ? pathname.slice(1) : null;
+    if (!allowed) { res.writeHead(404); res.end("Not found"); return; }
+    res.setHeader("Content-Type", allowed.endsWith(".js") ? "text/javascript" : "text/html");
+    fs.createReadStream(path.resolve(allowed)).pipe(res);
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  let browser;
   try {
+    browser = await chromium.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox"] });
     const page = await browser.newPage({acceptDownloads:true, viewport:{width:1280,height:900}});
     const consoleErrors=[];
     page.on("pageerror", error => consoleErrors.push(error.message));
-    await page.goto("file://" + path.resolve("index.html"));
+    await page.goto("http://127.0.0.1:" + server.address().port + "/");
     await page.locator("#demo").click();
     assert.equal(await page.locator("#total").innerText(), "5,000");
     assert.equal(await page.locator("#selected").innerText(), "5,000");
@@ -58,5 +68,8 @@ function fcsFixture() {
     assert.match(await page.locator("#summary").innerText(), /sample\.fcs/);
     assert.deepEqual(consoleErrors,[]);
     console.log("Browser smoke passed: sample FCS import, demo gating, CSV export; no page errors");
-  } finally { await browser.close(); }
+  } finally {
+    if (browser) await browser.close();
+    await new Promise(resolve => server.close(resolve));
+  }
 })().catch(error => { console.error(error); process.exitCode=1; });
