@@ -125,7 +125,7 @@
     function bounds() {
       return Object.fromEntries(gateFields.map(k => [k, Number($(k).value)]));
     }
-    function format(n) { return Number(n).toPrecision(7).replace(/\.?0+$/, ""); }
+    function format(n) { return Number(n).toPrecision(6).replace(/(\.\d*?[1-9])0+(?=e|$)/, "$1").replace(/\.0+(?=e|$)/, ""); }
     function setFields(b) { for (const key of gateFields) $(key).value = String(b[key]); }
     function fullGate() { return { xmin:xRange.min, xmax:xRange.max, ymin:yRange.min, ymax:yRange.max }; }
     function applyGate() {
