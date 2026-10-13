@@ -44,6 +44,10 @@ jobs:
           node --check web/fcs.js
           node --check web/app.js
           node --test tests/fcs.test.cjs
+      - name: Install browser smoke-test driver
+        run: npm install --no-save --ignore-scripts --no-audit playwright-core@1.55.0
+      - name: Run browser workflow in headless Chrome
+        run: node tests/browser-smoke.cjs
       - name: Check browser entry points
         run: |
           test -f index.html
