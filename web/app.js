@@ -87,7 +87,7 @@ const $ = id => document.getElementById(id);
       $("yaxis").value=String(Math.min(1,data.channels.length-1));
       for(const id of gateFields.concat(["apply","reset"])) $(id).disabled=false;
       $("total").textContent=numberFormat.format(data.total);
-      $("summary").textContent=name+" · "+data.version+" · "+data.channels.length+" channels · raw, uncompensated events";
+      $("summary").textContent=name+" · "+data.version+" · "+data.channels.length+" channels · event values as stored in the file";
       setAxes();
     }
     $("file").addEventListener("change", async event => {
