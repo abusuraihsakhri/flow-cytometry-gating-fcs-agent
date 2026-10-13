@@ -1,190 +1,59 @@
-# Flow Cytometry Gating Fcs Agent
+# Flow Cytometry Gating FCS Agent
 
-> **Domain:** Computational Biology & AI Drug Discovery  
-> **Reference Guidelines & Standards:** `wwPDB, IUPAC & CLSI Computational Guidelines`
+### [Open the Live Application →](https://abusuraihsakhri.github.io/flow-cytometry-gating-fcs-agent/)
 
-<div align="center">
+A browser-based explorer for **FCS list-mode event data**, plus separate Python utilities for deterministic metric-based task audits. The browser explorer runs entirely client-side; the Python API and CLI are independent tools.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+## Browser FCS explorer
 
-</div>
+Open the live application or open `index.html` locally. Choose an `.fcs` file, select X/Y channels, draw a rectangular region on the plot (or enter inclusive numeric bounds), and export gated event rows as CSV. **Load synthetic example** displays an explicitly synthetic dataset without uploading a file.
 
----
+The browser parser supports **FCS 2.0, 3.0 and 3.1**, list mode (`$MODE=L`), floating-point (`F`), double-precision (`D`), and 8/16/32-bit unsigned integer (`I`) data in either supported byte order. It accepts one dataset, at most 64 parameters, 250,000 events and a 128 MiB file. It rejects malformed headers, unsupported encodings and truncated DATA segments. Rendering is sampled to at most 20,000 events; gated counts use all imported events.
 
-## 📖 What It Does
+**Scientific limitations:** Channel values are used **as stored in the file**; their prior compensation state depends on the acquisition/export workflow. The browser does not apply spillover compensation, spectral unmixing, logicle/biexponential transforms, automatic population discovery, sequential gating, gating-ML export, or clinical interpretation. The rectangular gate and CSV export are exploratory, not a validated diagnostic pipeline. Verify results against established cytometry software before research reporting or clinical use.
 
-Flow Cytometry Gating Fcs Agent is an enterprise-grade analytical platform for flow cytometry data evaluation, compensation, and automated gating. It orchestrates specialized worker agents to evaluate specimen metrics, detect anomalies, and produce cryptographically signed audit dossiers.
+**Privacy:** The static browser tool reads data locally into memory. It does not upload FCS content, store the dataset remotely, or call an analysis server. CSV files are generated in the browser. Avoid uploading sensitive data to untrusted deployments or using this application for regulated clinical processing.
 
----
+## Python audit utilities
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+The existing Python entry points do **not** parse FCS files; they classify supplied numeric metrics using fixed, project-defined thresholds and return structured alerts. They are not validated biological reference intervals. The repository retains two implementations for compatibility: `cli.py` and `flow_cytometry_gate.cli`. The enrichment modules are generic threshold evaluators, not instrument QC validation algorithms.
 
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
-- **Multi-Worker Agent Architecture**: Specialized workers for QC invariant checking, safety escalation, and protocol conformance.
-- **Enrichment Suite**: 8 domain-specific analytical engines for comprehensive specimen evaluation.
-
----
-
-## 💻 Installation
+Requirements: Python 3.10+.
 
 ```bash
-# Clone the repository
 git clone https://github.com/abusuraihsakhri/flow-cytometry-gating-fcs-agent.git
 cd flow-cytometry-gating-fcs-agent
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[test]"
 
-# Install dependencies
-pip install fastapi uvicorn pydantic pytest
-
-# For production, set the audit secret key
-export AUDIT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
-```
-
----
-
-## 🖥️ CLI Quickstart & Usage
-
-### 1. Run Single Audit
-```bash
-python cli.py audit --task-id TASK-001 --target TARGET-01 --primary 28.5 --secondary 14.2 --critical --status DISCORDANT
-```
-
-### 2. Supervisor Chat Query
-```bash
-python cli.py chat "What is the system status?"
-```
-
-### 3. Batch Process CSV Records
-```bash
+python cli.py audit --task-id TEST-01 --target SAMPLE-01 --primary 28.5 --secondary 14.2
 python cli.py batch -i sample.csv -o results.csv
-```
-
-### 4. Verify Audit Trail Integrity
-```bash
 python cli.py verify-audit
-```
-
-### 5. Launch REST API Server
-```bash
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-### Parameter Reference
-| Parameter | Description | Default |
-|:----------|:------------|:--------|
-| `--task-id` | Unique task / case identifier | `TASK-2026-001` |
-| `--target` | Entity or specimen key | `KEY-TARGET-01` |
-| `--primary` | Primary domain measurement | `28.5` |
-| `--secondary` | Secondary kinetic/confidence score | `14.2` |
-| `--critical` | Emergency escalation flag | `False` |
-| `--status` | Status code or phenotype descriptor | `DISCORDANT` |
+API endpoints include `/health`, `/api/audit`, `/api/chat`, `/api/audit/logs`, and `/metrics`. FastAPI interactive documentation is at `http://127.0.0.1:8000/docs`. This backend is **not** provided by GitHub Pages.
 
-### Input Data Schema (CSV Batch)
+The audit logs use in-memory HMAC-SHA256 chaining. Set `AUDIT_SECRET_KEY` to a securely generated random value before starting a persistent service; **the ledger is not durable across restarts** and is not a regulatory audit-log substitute. Identifier screening is regex-based and **does not guarantee PHI de-identification or HIPAA compliance**. Do not expose the unauthenticated development API publicly or feed it identifiable patient data. The `mock` chat adapter does not run an actual language model; external model integrations are not implemented.
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Parameter / observation metric | Required |
-| `target_identifier` | Specimen / target identifier | Required |
-| `primary_metric` | Primary measurement value | Required |
-| `secondary_metric` | Secondary measurement value | Required |
-| `is_critical_flag` | Emergency escalation flag | Required |
-| `status_descriptor` | Status or phenotype descriptor | Required |
+For Docker, copy `.env.example` to `.env`, configure `AUDIT_SECRET_KEY`, and run `docker compose up --build`. The Docker image runs the Python API, not the static browser app.
 
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Secure Key Generation:** Uses `secrets.token_hex()` for ephemeral key generation when `AUDIT_SECRET_KEY` is not set.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
-### Environment Variables
-
-| Variable | Description | Required |
-|:---------|:------------|:---------|
-| `AUDIT_SECRET_KEY` | HMAC-SHA256 key for audit trail signing | Recommended |
-| `MODEL_PROVIDER` | LLM provider (mock/ollama/claude/openai) | No (default: mock) |
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+## Tests
 
 ```bash
-pytest -v
+python -m pytest -q
+node --test tests/*.test.cjs
+node --check web/fcs.js
+python -m build --wheel
 ```
 
-Execute high-throughput batch simulation benchmarks:
+GitHub Actions runs Python 3.10–3.12 tests and Node.js parser tests. Browser logic has no third-party JavaScript dependencies.
 
-```bash
-python simulator.py 1000
-```
+## Technology and compatibility
 
----
+Plain HTML/CSS/JavaScript for the static explorer, with native `ArrayBuffer`, `DataView`, `Canvas` and `Blob` APIs; Python, Pydantic and FastAPI for the separate audit service. Modern evergreen browsers (Chrome, Firefox, Safari and Edge) are expected to support the browser tool. The FCS binary reader is JavaScript rather than Pyodide, avoiding a large Python runtime download.
 
-## 🐳 Container Deployment
+## License
 
-### Using Docker
-```bash
-# Copy environment template
-cp .env.example .env
-# Edit .env and set AUDIT_SECRET_KEY
-
-# Build and run
-docker build -t flow-cytometry-gating-fcs-agent .
-docker run -p 8000:8000 --env-file .env flow-cytometry-gating-fcs-agent
-```
-
-### Using Docker Compose
-```bash
-cp .env.example .env
-# Edit .env and set AUDIT_SECRET_KEY
-docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-flow-cytometry-gating-fcs-agent/
-├── agents/                     # Core agent modules (supervisor, workers, API)
-│   ├── api.py                  # FastAPI REST endpoints
-│   ├── base.py                 # Security, PHI guard, audit trail
-│   ├── models.py               # Pydantic data models
-│   ├── supervisor.py           # Orchestrator coordinator
-│   ├── workers.py              # Specialized evaluation workers
-│   ├── llm_factory.py          # LLM provider abstraction
-│   ├── metrics.py              # Prometheus metrics collector
-│   ├── learning.py             # Bayesian calibration engine
-│   └── streamer.py             # WebSocket telemetry broadcaster
-├── flow_cytometry_gate/        # Flow cytometry-specific engine
-│   ├── agents.py               # Specialized sub-agents
-│   ├── engine.py               # Domain evaluation engine
-│   ├── models.py               # Data models
-│   ├── cli.py                  # CLI for flow cytometry engine
-│   └── server.py               # FastAPI server factory
-├── tests/                      # Test suite
-├── web/index.html              # Operations console
-├── cli.py                      # Main CLI entry point
-├── simulator.py                # High-throughput simulator
-├── enrichment.py               # Domain enrichment engines
-├── Dockerfile                  # Container image
-├── docker-compose.yml          # Container orchestration
-└── pyproject.toml              # Project metadata
-```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

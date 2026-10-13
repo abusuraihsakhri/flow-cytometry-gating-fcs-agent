@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'">
+  <meta name="description" content="Local FCS event exploration and rectangular flow-cytometry gating.">
+  <title>Flow cytometry · FCS gate explorer</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:#0b1220; color:#edf3fa; }
+    * { box-sizing:border-box; }
+    body { max-width:1240px; margin:0 auto; padding:24px; }
+    header { display:flex; flex-wrap:wrap; align-items:start; justify-content:space-between; gap:12px; margin-bottom:20px; }
+    h1 { font-size:1.65rem; margin:0 0 4px; }
+    h2 { font-size:1rem; margin:0 0 14px; }
+    p { color:#b5c2d5; line-height:1.55; margin:7px 0; }
+    .tag { color:#a8ddfb; border:1px solid #415b78; border-radius:30px; padding:7px 11px; font-size:.8rem; }
+    .layout { display:grid; grid-template-columns:minmax(250px,320px) minmax(0,1fr); gap:16px; }
+    .panel { border:1px solid #344358; border-radius:12px; background:#141e2e; padding:18px; min-width:0; }
+    .stack { display:grid; gap:15px; }
+    label { display:block; margin-bottom:6px; font-weight:600; font-size:.85rem; }
+    input,select,button { font:inherit; }
+    input[type="file"],input[type="number"],select { display:block; width:100%; color:#f1f5f9; background:#0d1727; border:1px solid #52657d; border-radius:7px; padding:10px; min-height:42px; }
+    input[type="file"] { max-width:100%; font-size:.82rem; }
+    :focus-visible { outline:3px solid #72ccff; outline-offset:2px; }
+    button { border:1px solid #5e7b9c; color:#f0f7ff; background:#243851; padding:10px 14px; border-radius:7px; cursor:pointer; min-height:42px; }
+    button.primary { background:#2563a4; border-color:#519de7; font-weight:650; }
+    button:hover:not(:disabled) { filter:brightness(1.16); }
+    button:disabled { cursor:not-allowed; opacity:.5; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .actions button { flex:1; }
+    .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .plotbox { position:relative; background:#0b1423; border:1px solid #344358; border-radius:9px; overflow:hidden; }
+    canvas { width:100%; height:auto; aspect-ratio: 1.65; display:block; cursor:crosshair; touch-action:none; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:14px 0; }
+    .stat { border:1px solid #364c66; background:#111b2b; padding:12px; border-radius:8px; }
+    .stat strong { font-size:1.22rem; display:block; margin-top:4px; font-variant-numeric:tabular-nums; }
+    .stat small { color:#b9cbdf; }
+    .hint { font-size:.81rem; color:#b9c8da; }
+    .message { padding:12px; border:1px solid #46617a; background:#11243a; border-radius:8px; margin-bottom:12px; overflow-wrap:anywhere; }
+    .message.error { background:#3b1b25; border-color:#c67482; color:#ffdce2; }
+    .summary { font-size:.84rem; border-top:1px solid #344358; padding-top:12px; margin-top:12px; overflow-wrap:anywhere; }
+    footer { border-top:1px solid #344358; margin-top:20px; padding-top:12px; }
+    @media(max-width:760px) { body { padding:12px; } .layout { grid-template-columns:1fr; } .stats { gap:5px; } .stat { padding:8px; } .stat strong { font-size:1rem; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Flow cytometry · FCS gate explorer</h1>
+      <p>Inspect list-mode events, select detector channels and export a rectangular gate.</p>
+    </div>
+    <span class="tag">Local processing · No upload</span>
+  </header>
+  <main class="layout">
+    <section class="panel stack" aria-label="File and gating controls">
+      <div>
+        <h2>1. Load data</h2>
+        <label for="file">FCS 2.0 / 3.0 / 3.1 file</label>
+        <input id="file" type="file" accept=".fcs">
+        <p class="hint">Supports single-dataset list-mode FCS with float, double or 8/16/32-bit integer events, up to 250,000 events and 128 MiB. No compensation or transformation is applied by this app.</p>
+        <button id="demo" type="button">Load synthetic example</button>
+      </div>
+      <div>
+        <h2>2. Choose axes</h2>
+        <div class="pair">
+          <div><label for="xaxis">X channel</label><select id="xaxis" disabled></select></div>
+          <div><label for="yaxis">Y channel</label><select id="yaxis" disabled></select></div>
+        </div>
+      </div>
+      <div>
+        <h2>3. Set rectangular gate</h2>
+        <p class="hint">Drag across the scatter plot or enter channel values below. Bounds are inclusive.</p>
+        <div class="pair">
+          <div><label for="xmin">X minimum</label><input id="xmin" type="number" step="any" disabled></div>
+          <div><label for="xmax">X maximum</label><input id="xmax" type="number" step="any" disabled></div>
+          <div><label for="ymin">Y minimum</label><input id="ymin" type="number" step="any" disabled></div>
+          <div><label for="ymax">Y maximum</label><input id="ymax" type="number" step="any" disabled></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="apply" class="primary" disabled>Apply gate</button>
+        <button id="reset" disabled>Reset to all</button>
+      </div>
+      <button id="export" disabled>Export gated events as CSV</button>
+      <p class="hint">Exploratory analysis only. No compensation, spectral unmixing, logicle transformation, automated population identification, or clinical classification is performed.</p>
+    </section>
+    <section class="panel">
+      <h2>Event distribution</h2>
+      <div id="message" class="message" role="status" aria-live="polite">Select a local FCS file or load the explicitly synthetic example.</div>
+      <div class="plotbox"><canvas id="plot" width="960" height="570" aria-label="Scatter plot of event channels; drag to create a rectangular gate" role="img"></canvas></div>
+      <p class="hint">Cyan: included events · Grey: excluded events · Blue outline: gate. At most 20,000 events are plotted; counts use all imported events.</p>
+      <div class="stats" aria-live="polite">
+        <div class="stat"><small>Total events</small><strong id="total">—</strong></div>
+        <div class="stat"><small>Within gate</small><strong id="selected">—</strong></div>
+        <div class="stat"><small>Fraction</small><strong id="fraction">—</strong></div>
+      </div>
+      <div id="summary" class="summary">No dataset loaded.</div>
+    </section>
+  </main>
+  <footer><p class="hint">Data stays in the browser's memory and is not transmitted by this application. Do not treat exploratory gates as a validated diagnostic workflow. <a style="color:#9dd9ff" href="https://github.com/abusuraihsakhri/flow-cytometry-gating-fcs-agent">Source repository</a>.</p></footer>
+  <script src="./web/fcs.js"></script>
+  <script src="./web/app.js"></script>
+</body>
+</html>
