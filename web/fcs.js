@@ -54,8 +54,8 @@
     const datatype = (metadata.$DATATYPE || "").toUpperCase();
     if (!["F", "D", "I"].includes(datatype)) throw new Error("Only $DATATYPE F, D and I are supported");
     const order = metadata.$BYTEORD;
-    if (!["1,2,3,4", "4,3,2,1"].includes(order)) throw new Error("Unsupported $BYTEORD: " + order);
-    const little = order === "1,2,3,4";
+    if (!["1,2,3,4", "4,3,2,1", "1,2,3,4,5,6,7,8", "8,7,6,5,4,3,2,1"].includes(order)) throw new Error("Unsupported $BYTEORD: " + order);
+    const little = order === "1,2,3,4" || order === "1,2,3,4,5,6,7,8";
     const channels = [];
     const widths = [];
     for (let i = 1; i <= count; i++) {
