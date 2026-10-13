@@ -7,7 +7,7 @@ function fixture({ datatype = "F", little = true, width = 32, values = [[1, 10],
   const enc = new TextEncoder();
   const keywords = [
     "$MODE", "L", "$TOT", String(values.length), "$PAR", "2",
-    "$DATATYPE", datatype, "$BYTEORD", little ? "1,2,3,4" : "4,3,2,1",
+    "$DATATYPE", datatype, "$BYTEORD", width === 64 ? (little ? "1,2,3,4,5,6,7,8" : "8,7,6,5,4,3,2,1") : (little ? "1,2,3,4" : "4,3,2,1"),
     "$P1B", String(width), "$P2B", String(width),
     "$P1N", name, "$P2N", "SSC-A", "$NEXTDATA", "0"
   ];
