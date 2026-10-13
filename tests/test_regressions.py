@@ -36,3 +36,28 @@ def test_unimplemented_external_models_fail_closed():
     for provider in ("ollama", "openai", "claude"):
         with pytest.raises(ValueError, match="not implemented"):
             LLMFactory.create(provider)
+
+
+def test_api_rejects_restricted_identifier_without_server_error():
+    from fastapi.testclient import TestClient
+    from agents.api import app
+
+    response = TestClient(app).post("/api/audit", json={
+        "task_id": "MRN-12345678",
+        "target_identifier": "SAMPLE-1",
+        "primary_metric": 3.0,
+    })
+    assert response.status_code == 400
+    assert "12345678" not in response.text
+
+
+def test_api_rejects_nonfinite_metric():
+    from fastapi.testclient import TestClient
+    from agents.api import app
+
+    response = TestClient(app).post("/api/audit", json={
+        "task_id": "T",
+        "target_identifier": "S",
+        "primary_metric": "Infinity",
+    })
+    assert response.status_code == 422
