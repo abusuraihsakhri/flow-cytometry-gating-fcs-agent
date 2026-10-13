@@ -42,6 +42,7 @@ jobs:
       - name: JavaScript syntax and FCS tests
         run: |
           node --check web/fcs.js
+          node --check web/app.js
           node --test tests/fcs.test.cjs
       - name: Check browser entry points
         run: |
@@ -49,3 +50,5 @@ jobs:
           test -f web/index.html
           grep -q 'web/fcs.js' index.html
           grep -q './fcs.js' web/index.html
+          grep -q './web/app.js' index.html
+          grep -q './app.js' web/index.html
